@@ -1,6 +1,8 @@
 import time
 import datetime
 import zmq
+import sys
+import os
 
 #SERVER SITE
 
@@ -19,6 +21,10 @@ class Server:
         self.socket = self.context.socket(zmq.REP)
         self.socket.bind("tcp://*:5555")
         self.packet_listener()
+        
+    #
+    # Init server, wait for the client
+    #
 
     def packet_listener(self):
         print("enable listener.. \n\n")
@@ -36,6 +42,10 @@ class Server:
 
             time.sleep(1)
 
+    #
+    # Display game menu
+    #
+
     def init_game(self):
         id = 5555
         print('''Hello in this super extra cool game \n
@@ -47,35 +57,58 @@ class Server:
                  1. Type: 'start' to start the game \n
                  2. 'stop' to stop the game \n
         ''')
-    
+    #    
+    # Take secret word from user
+    #
+
     def generate_word(self):
         word = input("Type word to guess: ")
         return word
+
+    #
+    # Get hint from host to send to the client
+    #     
     
+    def get_hint(self):
+        hint = input("Type now your hint to the word: ")
+        return hint
+
+    #
+    # Begin game
+    #
+
     def game(self):
         self.init_game()
+        self.socket.recv()
 
         command = input()
 
         if command.lower() == "start":
-            self.word = self.generate_word()
-            self.socket.send(b"Your opponent set word to guess. Now is your turn to answer. Type your word")
+            self.secret_word = self.generate_word()
+            self.socket.send(b'''Your opponent set word to guess. Now is your turn to answer. Type your word. \n He also gave first hint to his secret word: ''' + self.get_hint().encode() + b"\n" )
 
         while True:
             self.message = self.socket.recv()
-            #print(f"Received request: {self.message}")
-            
-            print(f"Your opponent said: {self.message} \n")
+            print(f"Your opponent said: {self.message.decode()} \n")
 
-            if self.message.lower() == self.word.lower():
+            if self.message.lower().decode() == self.secret_word.lower():
                 print("Your opponent guessed your secret word, you lose..")
+                self.socket.send(b"end_game")
+                sys.exit()
                 break
+                # add here options to restart game
             else:
-                print("Your opponent did not guess, type: \n 1. 'hint' to send him hint \n 2.'again' to give him another chance \n ")
+                print("Your opponent did not guess, type: \n 1. 'hint' to send him hint \n 2.'again' to give him another chance without hint \n ")
+                option = input()
+                
+                if option.lower() == "hint":
+                    self.socket.send(b"Try again, here is the hint: " + self.get_hint().encode())
+                else:
+                    self.socket.send(b"Try again.")
             
             time.sleep(0.5)
-            #self.socket.send(b"World")
-
+            os.system("cls")
+            print("waiting for response..\n\n")
 
 
 server = Server()
