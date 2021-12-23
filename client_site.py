@@ -2,8 +2,19 @@ import time
 import zmq
 import sys
 import os
+import datetime
 
 #CLIENT SITE
+
+def log(func):
+    def wrapper(*args, **kwargs):
+        value = func(*args, **kwargs)
+        with open("logs.txt", "a") as file:
+            now = datetime.datetime.now()
+            file.write(f"Client::{now:%Y-%m-%d %H:%M:%S} >> {func.__name__} \n")
+        return value
+    return wrapper
+
 
 class Test:
     def __init__(self):
@@ -16,6 +27,7 @@ class Test:
     # Connect to host
     #
 
+    @log
     def connect(self):
         while True:
             self.socket.send(b"connected")
@@ -28,6 +40,8 @@ class Test:
                 break
             else:
                 print("not connected")
+            
+            
 
             time.sleep(1)
 
@@ -35,6 +49,7 @@ class Test:
     # Take id from user to connect with host 
     #
 
+    @log
     def init_game(self):
         id = input("Type id to connect with host: ")
         return id
@@ -43,6 +58,7 @@ class Test:
     # Get answer from user
     #
 
+    @log
     def get_answer(self):
         answer = input("type anwser: ")
         return answer
@@ -51,8 +67,14 @@ class Test:
     # Begin game
     #
 
+    @log
     def game(self):
-        print(self.socket.recv().decode())
+        message = self.socket.recv().decode()
+        
+        print(message)
+
+        if message == 'stop':
+                sys.exit()
 
         while True:
             self.socket.send(self.get_answer().encode())
